@@ -1,0 +1,2 @@
+class BufferOverflow:
+    pass
