@@ -13,7 +13,7 @@ class Stack:
         self.size = size
         self.function = kb_function
 
-    def add_offset(self, rbp_offset, address, block, instruction_index, opcode_index):
+    def add_offset(self, rbp_offset, block, instruction_index, opcode_index):
         sb: buffers.StackBuffer
         if rbp_offset not in self.frame_buffers:
             sb = buffers.StackBuffer(rbp_offset)
@@ -21,10 +21,9 @@ class Stack:
         else:
             sb = self.frame_buffers[rbp_offset]
         sb.add_reference({
-            address: address,
-            block: block,
-            instruction_index: instruction_index,
-            opcode_index: opcode_index,
+            'block': block,
+            'instruction_index': instruction_index,
+            'opcode_index': opcode_index,
         })
 
 
@@ -34,6 +33,7 @@ class Function:
         self.blocks = list(self.function.blocks)
         self.stack_frame = Stack(self.get_stack_size(), kb_function)
         self.find_stack_buffers()
+        self.check_buffer_usages()
 
     def get_stack_size(self) -> int:
         insn: capstone.CsInsn
@@ -46,9 +46,15 @@ class Function:
     def find_stack_buffers(self):
         for block in self.blocks:
             insn: capstone.CsInsn
-            for i, insn in block.capstone.insns:
+            for i, insn in enumerate(block.capstone.insns):
                 operand: capstone.x86.X86Op
                 for k, operand in enumerate(insn.operands):
                     # if it derefs rbp + some displacement, it's probably working on a stack buffer
                     if operand.type == capstone.x86.X86_OP_MEM and insn.reg_name(operand.value.mem.base) == 'rbp':
                         self.stack_frame.add_offset(operand.value.mem.disp, block, i, k)
+
+    def check_buffer_usages(self):
+        frame_buffer: buffers.StackBuffer
+        for frame_buffer in self.stack_frame.frame_buffers.values():
+            print(f'checking usages for {frame_buffer}')
+            frame_buffer.check_usages()

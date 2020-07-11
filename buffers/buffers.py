@@ -1,5 +1,6 @@
 from buffers import trace_uses
 
+
 class Buffer:
     def __init__(self):
         self.writes = []
@@ -18,7 +19,9 @@ class StackBuffer(Buffer):
 
     def check_usages(self):
         for reference in self.references:
+            print(f'reference {reference}')
             trace_uses.BufferTracer(reference)
+
 
 class StaticBuffer(Buffer):
     pass
