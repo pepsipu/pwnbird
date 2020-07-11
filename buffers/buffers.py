@@ -1,12 +1,24 @@
+from buffers import trace_uses
+
 class Buffer:
     def __init__(self):
-        self.size = 0
+        self.writes = []
+        self.reads = []
 
 
 class StackBuffer(Buffer):
-    def __init__(self):
-        super().__init__()
+    references = []
 
+    def __init__(self, rbp_offset):
+        super().__init__()
+        self.rbp_offset = rbp_offset
+
+    def add_reference(self, reference):
+        self.references.append(reference)
+
+    def check_usages(self):
+        for reference in self.references:
+            trace_uses.BufferTracer(reference)
 
 class StaticBuffer(Buffer):
     pass
