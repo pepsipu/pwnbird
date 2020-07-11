@@ -11,7 +11,7 @@ class Binary64:
             print('Could not find main function. Please specify it.')
             exit(1)
         self.cfg = self.project.analyses.CFGEmulated(keep_state=True, starts=[self.main])
-        main = functions.Function(self.cfg.kb.functions[self.main])
+        main = functions.Function(self.cfg.kb.functions[self.main], self)
     # because rdi *always* contains the first param for libc main, rdi will contain the address of the main function.
     # find last write to rdi and get that value to get main
     # also, handle the case where libc main ISN'T being used and the entry is the main function

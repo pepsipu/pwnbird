@@ -1,10 +1,6 @@
-import enum
-
 import capstone
 
-
-class BufferUsageTypes(enum.Enum):
-    FUNCTION_PARAMETER = 0
+param_regs = ['rdi', 'rsi', 'rdx', 'rcx', 'r8', 'r9']
 
 
 class BufferTracer:
@@ -25,7 +21,7 @@ class BufferTracer:
         regs = {}
         # the initial reference to the buffer will be moved into a register, which will be marked
         referencing_insn: capstone.CsInsn = block.capstone.insns[self.reference['instruction_index']]
-        regs[referencing_insn.reg_name(referencing_insn.operands[0].value.reg)] = True
+        regs[referencing_insn.reg_name(referencing_insn.operands[0].value.reg)] = 'buf_mark'
         # track all register activity up until the call a function
         # all registers except the one from the referencing instruction will be marked as not containing the buffer
         # until they have gotten a mov from a register containing the buffer
@@ -33,16 +29,20 @@ class BufferTracer:
         for insn in block.capstone.insns[self.reference['instruction_index'] + 1:-1]:
             if insn.mnemonic != 'mov':
                 continue
-            operands_are_registers = True
+            op_types = []
             for operand in insn.operands:
+                op_types.append(operand.type)
                 if operand.type == capstone.x86.X86_OP_REG:
                     register = insn.reg_name(operand.value.reg)
                     if register not in regs:
                         regs[register] = False
-                else:
-                    operands_are_registers = False
-            if operands_are_registers:
+            if all(op_type == capstone.x86.X86_OP_REG for op_type in op_types):
                 # symbolic mov
                 regs[insn.reg_name(insn.operands[0].value.reg)] = regs[insn.reg_name(insn.operands[1].value.reg)]
-        if any(val if reg in ['rdi', 'rsi', 'rdx', 'rcx', 'r8', 'r9'] else False for reg, val in regs):
-            return True
+            if op_types[0] == capstone.x86.X86_OP_REG and op_types[1] == capstone.x86.X86_OP_IMM:
+                regs[insn.reg_name(insn.operands[0].value.reg)] = insn.operands[1].value.imm
+        if any(val == 'buf_mark' if reg in param_regs else False for reg, val in regs.items()):
+            return {
+                'regs': regs,
+                'address': block.capstone.insns[-1].operands[0].value.imm  # call addr
+            }

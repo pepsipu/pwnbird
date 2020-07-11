@@ -4,6 +4,7 @@ import angr
 import capstone
 
 from buffers import buffers
+from vectors import vectors
 
 
 class Stack:
@@ -28,12 +29,14 @@ class Stack:
 
 
 class Function:
-    def __init__(self, kb_function: angr.knowledge_plugins.Function):
+    def __init__(self, kb_function: angr.knowledge_plugins.Function, binary):
         self.function = kb_function
+        self.binary = binary
         self.blocks = list(self.function.blocks)
         self.stack_frame = Stack(self.get_stack_size(), kb_function)
         self.find_stack_buffers()
         self.check_buffer_usages()
+        self.sanity_check_buffers()
 
     def get_stack_size(self) -> int:
         insn: capstone.CsInsn
@@ -56,5 +59,9 @@ class Function:
     def check_buffer_usages(self):
         frame_buffer: buffers.StackBuffer
         for frame_buffer in self.stack_frame.frame_buffers.values():
-            print(f'checking usages for {frame_buffer}')
             frame_buffer.check_usages()
+
+    def sanity_check_buffers(self):
+        frame_buffer: buffers.StackBuffer
+        for frame_buffer in self.stack_frame.frame_buffers.values():
+            vectors.sanity_check_buffer(frame_buffer, self.binary)

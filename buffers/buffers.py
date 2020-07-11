@@ -1,14 +1,9 @@
 from buffers import trace_uses
 
 
-class Buffer:
-    def __init__(self):
-        self.writes = []
-        self.reads = []
-
-
-class StackBuffer(Buffer):
+class StackBuffer:
     references = []
+    usages = []
 
     def __init__(self, rbp_offset):
         super().__init__()
@@ -18,14 +13,4 @@ class StackBuffer(Buffer):
         self.references.append(reference)
 
     def check_usages(self):
-        for reference in self.references:
-            print(f'reference {reference}')
-            trace_uses.BufferTracer(reference)
-
-
-class StaticBuffer(Buffer):
-    pass
-
-
-class HeapBuffer(Buffer):
-    pass
+        self.usages = [trace_uses.BufferTracer(reference) for reference in self.references]
