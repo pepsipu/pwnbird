@@ -4,7 +4,6 @@ from buffers import trace_uses
 from arch import arch
 
 
-
 class BufferOverflow:
     def __init__(self, usages, binary):
         self.usages = usages
@@ -20,9 +19,12 @@ class BufferOverflow:
                 self.buffer_write_checks(usage.fp)
 
     def buffer_write_checks(self, fp):
+        # we have access to function params here, so we can check if we've got an oob fgets or something like that
         function_name = self.binary.cfg.kb.functions[fp['address']].demangled_name
         if function_name == 'gets':
-            pass
+            self.vulnerabilities.append({
+                "type": "oob",
+                "write_size": math.inf,
+                "function": "gets"
+            })
 
-    def get_vulnerabilities(self):
-        pass

@@ -8,24 +8,36 @@ from vectors import vectors
 
 
 class Stack:
-    frame_buffers = {}
-
     def __init__(self, size, kb_function):
+        self.frame_buffers = {}
         self.size = size
         self.function = kb_function
 
-    def add_offset(self, rbp_offset, block, instruction_index, opcode_index):
-        sb: buffers.StackBuffer
+    def get_buffer(self, rbp_offset):
         if rbp_offset not in self.frame_buffers:
             sb = buffers.StackBuffer(rbp_offset)
             self.frame_buffers[rbp_offset] = sb
+            return sb
         else:
-            sb = self.frame_buffers[rbp_offset]
+            return self.frame_buffers[rbp_offset]
+
+    def add_offset(self, rbp_offset, block, instruction_index, opcode_index):
+        sb: buffers.StackBuffer = self.get_buffer(rbp_offset)
         sb.add_reference({
             'block': block,
             'instruction_index': instruction_index,
             'opcode_index': opcode_index,
         })
+
+    # calculating a buffer's size is asking the question "how much can i write before i hit another buffer or the end of
+    # the stack (buffer 0)?". since writes happen from low address to high, we check how far the rbp offset is from
+    # an adjacent buffer. so, we can sort the list of offsets and see how much the buffer can hold before it hits the
+    # next offset
+    def calculate_buffer_size(self, offset):
+        sorted_buffers = [*self.frame_buffers.keys()]
+        sorted_buffers.sort()
+        sorted_buffers.insert(0, 0)
+        return -(offset - sorted_buffers[sorted_buffers.index(offset) - 1])
 
 
 class Function:
@@ -64,4 +76,7 @@ class Function:
     def sanity_check_buffers(self):
         frame_buffer: buffers.StackBuffer
         for frame_buffer in self.stack_frame.frame_buffers.values():
-            vectors.sanity_check_buffer(frame_buffer, self.binary)
+            frame_buffer.vulnerabilities = vectors.sanity_check_buffer(frame_buffer, self.binary)
+
+    def get_buffers(self):
+        return self.stack_frame.frame_buffers

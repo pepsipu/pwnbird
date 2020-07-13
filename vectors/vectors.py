@@ -3,6 +3,6 @@ from .vtypes import bof
 
 
 def sanity_check_buffer(buffer: buffers.StackBuffer, binary):
-    return {
-        'bof': bof.BufferOverflow(buffer.usages, binary),
-    }
+    vulnerabilities = []
+    vulnerabilities.extend(bof.BufferOverflow(buffer.usages, binary).vulnerabilities)
+    return vulnerabilities
